@@ -103,6 +103,8 @@ jobs:
   android_build:
     runs-on: ubuntu-22.04
     needs: check_version
+    env:
+      FRIDA_VERSION: '17.12.0'
 
     steps:
     - uses: actions/checkout@v3
@@ -147,6 +149,8 @@ jobs:
         
         git clone --recurse-submodules https://github.com/frida/frida
         cd frida
+        # try to checkout the requested FRIDA version (support both plain and v-prefixed tags)
+        git checkout "${FRIDA_VERSION}" || git checkout "v${FRIDA_VERSION}" || true
         for path in ../patches/*
         do
           name=$(basename $path)
@@ -159,7 +163,7 @@ jobs:
         done
         cd ..
         
-        ARCHES="android-arm android-arm64 android-x86 android-x86_64"
+        ARCHES="android-arm64"
         for ARCH in $ARCHES
         do
           mkdir build-$ARCH
@@ -205,25 +209,13 @@ jobs:
       shell: bash
       run: |
         
-        gzip build-android-arm/subprojects/frida-core/server/frida-server
         gzip build-android-arm64/subprojects/frida-core/server/frida-server
-        gzip build-android-x86/subprojects/frida-core/server/frida-server
-        gzip build-android-x86_64/subprojects/frida-core/server/frida-server
-        
-        gzip build-android-arm/subprojects/frida-core/inject/frida-inject
-        gzip build-android-arm64/subprojects/frida-core/inject/frida-inject
-        gzip build-android-x86/subprojects/frida-core/inject/frida-inject
-        gzip build-android-x86_64/subprojects/frida-core/inject/frida-inject
-        
-        gzip build-android-arm/subprojects/frida-core/lib/gadget/frida-gadget.so
-        gzip build-android-arm64/subprojects/frida-core/lib/gadget/frida-gadget.so
-        gzip build-android-x86/subprojects/frida-core/lib/gadget/frida-gadget.so
-        gzip build-android-x86_64/subprojects/frida-core/lib/gadget/frida-gadget.so
 
-        gzip build-android-arm/subprojects/frida-gum/bindings/gumjs/libfrida-gumjs-1.0.a
+        gzip build-android-arm64/subprojects/frida-core/inject/frida-inject
+
+        gzip build-android-arm64/subprojects/frida-core/lib/gadget/frida-gadget.so
+
         gzip build-android-arm64/subprojects/frida-gum/bindings/gumjs/libfrida-gumjs-1.0.a
-        gzip build-android-x86/subprojects/frida-gum/bindings/gumjs/libfrida-gumjs-1.0.a
-        gzip build-android-x86_64/subprojects/frida-gum/bindings/gumjs/libfrida-gumjs-1.0.a
         
 
     - name: Upload android arm frida-server for Florida
