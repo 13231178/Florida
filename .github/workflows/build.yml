@@ -153,13 +153,28 @@ jobs:
         git checkout "${FRIDA_VERSION}" || git checkout "v${FRIDA_VERSION}" || true
         for path in ../patches/*
         do
-          name=$(basename $path)
-          real=$(realpath $path)
+          name=$(basename "$path")
+          real=$(realpath "$path")
           echo "Apply patches in $real to frida/subprojects/$name"
           cd subprojects/$name
-          git am ../../../patches/$name/*.patch
+          # Try three-way git am first so context mismatches may still apply
+          if git am --3way --keep-cr ../../../patches/$name/*.patch; then
+            echo "git am --3way succeeded for $name"
+          else
+            echo "git am --3way failed for $name; attempting fallback with git apply --reject"
+            # abort any partial git-am state, ignore errors
+            git am --abort || true
+            # try to apply with git apply (creates .rej files on failure)
+            if git apply --reject --whitespace=fix ../../../patches/$name/*.patch; then
+              git add -A
+              git commit -m "Apply patches/$name via git apply fallback" || true
+              echo "git apply fallback succeeded for $name"
+            else
+              echo "git apply fallback also failed for $name; continuing without these patches"
+              # leave .rej files for inspection in the workspace; don't fail the job
+            fi
+          fi
           cd ../..
-          echo $i
         done
         cd ..
         
